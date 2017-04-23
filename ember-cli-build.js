@@ -1,16 +1,18 @@
 /* eslint-env node */
+// eslint-disable-next-line import/no-extraneous-dependencies
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
+
 const env = process.env.EMBER_ENV;
 const config = require('./config/environment')(env);
 
-module.exports = function(defaults) {
+module.exports = (defaults) => {
   const app = new EmberApp(defaults, {
     dotEnv: {
-      clientAllowedKeys: ['FIREBASE_URL']
+      clientAllowedKeys: ['FIREBASE_URL'],
     },
 
     fingerprint: {
-      extensions: ['js', 'css', 'png', 'jpg', 'gif', 'map', 'svg']
+      extensions: ['js', 'css', 'png', 'jpg', 'gif', 'map', 'svg'],
     },
 
     'ember-bootstrap': {
@@ -21,10 +23,10 @@ module.exports = function(defaults) {
       analytics: {
         file: 'app/analytics.html',
         enabled: !!config.GOOGLE_ANALYTICS_ID,
-        postProcess: function (content) {
+        postProcess(content) {
           return content.replace(/\{\{GOOGLE_ANALYTICS_ID\}\}/g, config.GOOGLE_ANALYTICS_ID);
-        }
-      }
+        },
+      },
     },
 
     sassOptions: {
@@ -32,8 +34,8 @@ module.exports = function(defaults) {
     },
 
     SRI: {
-      enabled: false
-    }
+      enabled: false,
+    },
   });
 
   // Use `app.import` to add additional libraries to the generated

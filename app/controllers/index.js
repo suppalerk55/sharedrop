@@ -3,308 +3,315 @@ import WebRTC from '../services/web-rtc';
 import Peer from '../models/peer';
 
 export default Ember.Controller.extend({
-    application: Ember.inject.controller('application'),
-    you: Ember.computed.alias('application.you'),
-    room: null,
-    webrtc: null,
+  application: Ember.inject.controller('application'),
+  you: Ember.computed.alias('application.you'),
+  room: null,
+  webrtc: null,
 
-    _onRoomConnected: function (event, data) {
-        var you = this.get('you'),
-            room = this.get('room');
+  _onRoomConnected(event, data) {
+    const you = this.get('you');
+    const room = this.get('room');
 
-        you.get('peer').setProperties(data.peer);
-        delete data.peer;
-        you.setProperties(data);
+    you.get('peer').setProperties(data.peer);
+    delete data.peer;
+    you.setProperties(data);
 
-        // Find and set your local IP
-        this._setUserLocalIP();
+    // Find and set your local IP
+    this._setUserLocalIP();
 
-        // Initialize WebRTC
-        this.set('webrtc', new WebRTC(you.get('uuid'), {
-            room: room.name,
-            firebaseRef: window.ShareDrop.ref
-        }));
-    },
+    // Initialize WebRTC
+    this.set('webrtc', new WebRTC(you.get('uuid'), {
+      room: room.name,
+      firebaseRef: window.ShareDrop.ref,
+    }));
+  },
 
-    _onRoomDisconnected: function () {
-        this.get('model').clear();
-        this.set('webrtc', null);
-    },
+  _onRoomDisconnected() {
+    this.get('model').clear();
+    this.set('webrtc', null);
+  },
 
-    _onRoomUserAdded: function (event, data) {
-        var you = this.get('you');
+  _onRoomUserAdded(event, data) {
+    const you = this.get('you');
 
-        if (you.get('uuid') !== data.uuid) {
-            this._addPeer(data);
-        }
-    },
+    if (you.get('uuid') !== data.uuid) {
+      this._addPeer(data);
+    }
+  },
 
-    _addPeer: function (attrs) {
-        var peerAttrs = attrs.peer,
-            peer;
+  _addPeer(attrs) {
+    const peerAttrs = attrs.peer;
 
-        delete attrs.peer;
-        peer = Peer.create(attrs);
-        peer.get('peer').setProperties(peerAttrs);
+    delete attrs.peer;
+    const peer = Peer.create(attrs);
+    peer.get('peer').setProperties(peerAttrs);
 
-        this.get('model').pushObject(peer);
-    },
+    this.get('model').pushObject(peer);
+  },
 
-    _onRoomUserChanged: function (event, data) {
-        const peers = this.get('model');
-        const peer = peers.findBy('uuid', data.uuid);
-        const peerAttrs = data.peer;
-        const defaults = {
-            uuid: null,
-            email: null,
-            public_ip: null,
-            local_ip: null
-        };
+  _onRoomUserChanged(event, data) {
+    const peers = this.get('model');
+    const peer = peers.findBy('uuid', data.uuid);
+    const peerAttrs = data.peer;
+    const defaults = {
+      uuid: null,
+      email: null,
+      public_ip: null,
+      local_ip: null,
+    };
 
-        if (peer) {
-            delete data.peer;
-            // Firebase doesn't return keys with null values,
-            // so we have to add them back.
-            peer.setProperties(Ember.$.extend({}, defaults, data));
-            peer.get('peer').setProperties(peerAttrs);
-        }
-    },
+    if (peer) {
+      delete data.peer;
 
-    _onRoomUserRemoved: function (event, data) {
-        const peers = this.get('model');
-        const peer = peers.findBy('uuid', data.uuid);
-        peers.removeObject(peer);
-    },
+      // Firebase doesn't return keys with null values,
+      // so we have to add them back.
+      peer.setProperties(Ember.$.extend({}, defaults, data));
+      peer.get('peer').setProperties(peerAttrs);
+    }
+  },
 
-    _onPeerP2PIncomingConnection: function (event, data) {
-        const connection = data.connection;
-        const peers = this.get('model');
-        const peer = peers.findBy('peer.id', connection.peer);
+  _onRoomUserRemoved(event, data) {
+    const peers = this.get('model');
+    const peer = peers.findBy('uuid', data.uuid);
+    peers.removeObject(peer);
+  },
 
-        // Don't switch to 'connecting' state on incoming connection,
-        // as p2p connection may still fail.
-        peer.set('peer.connection', connection);
-    },
+  _onPeerP2PIncomingConnection(event, data) {
+    const connection = data.connection;
+    const peers = this.get('model');
+    const peer = peers.findBy('peer.id', connection.peer);
 
-    _onPeerDCIncomingConnection: function (event, data) {
-        const connection = data.connection;
-        const peers = this.get('model');
-        const peer = peers.findBy('peer.id', connection.peer);
+    // Don't switch to 'connecting' state on incoming connection,
+    // as p2p connection may still fail.
+    peer.set('peer.connection', connection);
+  },
 
-        peer.set('peer.state', 'connected');
-    },
+  _onPeerDCIncomingConnection(event, data) {
+    const connection = data.connection;
+    const peers = this.get('model');
+    const peer = peers.findBy('peer.id', connection.peer);
 
-    _onPeerDCIncomingConnectionError: function (event, data) {
-        const connection = data.connection;
-        const peers = this.get('model');
-        const peer = peers.findBy('peer.id', connection.peer);
-        const error = data.error;
+    peer.set('peer.state', 'connected');
+  },
 
-        switch (error.type) {
-            case 'failed':
-            peer.set('peer.connection', null);
-            break;
-        }
-    },
+  _onPeerDCIncomingConnectionError(event, data) {
+    const connection = data.connection;
+    const peers = this.get('model');
+    const peer = peers.findBy('peer.id', connection.peer);
+    const error = data.error;
 
-    _onPeerP2POutgoingConnection: function (event, data) {
-        const connection = data.connection;
-        const peers = this.get('model');
-        const peer = peers.findBy('peer.id', connection.peer);
+    switch (error.type) {
+      case 'failed':
+        peer.set('peer.connection', null);
+        break;
+      default:
+        break;
+    }
+  },
 
+  _onPeerP2POutgoingConnection(event, data) {
+    const connection = data.connection;
+    const peers = this.get('model');
+    const peer = peers.findBy('peer.id', connection.peer);
+
+    peer.setProperties({
+      'peer.connection': connection,
+      'peer.state': 'connecting',
+    });
+  },
+
+  _onPeerDCOutgoingConnection(event, data) {
+    const connection = data.connection;
+    const peers = this.get('model');
+    const peer = peers.findBy('peer.id', connection.peer);
+    const file = peer.get('transfer.file');
+    const webrtc = this.get('webrtc');
+    const info = webrtc.getFileInfo(file);
+
+    peer.set('peer.state', 'connected');
+    peer.set('state', 'awaiting_response');
+
+    webrtc.sendFileInfo(connection, info);
+    console.log('Sending a file info...', info);
+  },
+
+  _onPeerDCOutgoingConnectionError(event, data) {
+    const connection = data.connection;
+    const peers = this.get('model');
+    const peer = peers.findBy('peer.id', connection.peer);
+    const error = data.error;
+
+    switch (error.type) {
+      case 'failed':
         peer.setProperties({
-            'peer.connection': connection,
-            'peer.state': 'connecting'
+          'peer.connection': null,
+          'peer.state': 'disconnected',
+          state: 'error',
+          errorCode: data.error.type,
         });
-    },
+        break;
+      default:
+        break;
+    }
+  },
 
-    _onPeerDCOutgoingConnection: function (event, data) {
-        const connection = data.connection;
-        const peers = this.get('model');
-        const peer = peers.findBy('peer.id', connection.peer);
-        const file = peer.get('transfer.file');
-        const webrtc = this.get('webrtc');
-        const info = webrtc.getFileInfo(file);
+  _onPeerP2PDisconnected(event, data) {
+    const connection = data.connection;
+    const peers = this.get('model');
+    const peer = peers.findBy('peer.id', connection.peer);
 
-        peer.set('peer.state', 'connected');
-        peer.set('state', 'awaiting_response');
+    if (peer) {
+      peer.set('peer.connection', null);
+      peer.set('peer.state', 'disconnected');
+    }
+  },
 
-        webrtc.sendFileInfo(connection, info);
-        console.log('Sending a file info...', info);
-    },
+  _onPeerP2PFileInfo(event, data) {
+    console.log('Peer:\t Received file info', data);
 
-    _onPeerDCOutgoingConnectionError: function (event, data) {
-        const connection = data.connection;
-        const peers = this.get('model');
-        const peer = peers.findBy('peer.id', connection.peer);
-        const error = data.error;
+    const connection = data.connection;
+    const peers = this.get('model');
+    const peer = peers.findBy('peer.id', connection.peer);
+    const info = data.info;
 
-        switch (error.type) {
-            case 'failed':
-            peer.setProperties({
-                'peer.connection': null,
-                'peer.state': 'disconnected',
-                'state': 'error',
-                'errorCode': data.error.type
-            });
-            break;
-        }
-    },
+    peer.set('transfer.info', info);
+    peer.set('state', 'received_file_info');
+  },
 
-    _onPeerP2PDisconnected: function (event, data) {
-        const connection = data.connection;
-        const peers = this.get('model');
-        const peer = peers.findBy('peer.id', connection.peer);
+  _onPeerP2PFileResponse(event, data) {
+    console.log('Peer:\t Received file response', data);
 
-        if (peer) {
-            peer.set('peer.connection', null);
-            peer.set('peer.state', 'disconnected');
-        }
-    },
+    const connection = data.connection;
+    const peers = this.get('model');
+    const peer = peers.findBy('peer.id', connection.peer);
+    const webrtc = this.get('webrtc');
+    const response = data.response;
 
-    _onPeerP2PFileInfo: function (event, data) {
-        console.log('Peer:\t Received file info', data);
+    if (response) {
+      const file = peer.get('transfer.file');
 
-        const connection = data.connection;
-        const peers = this.get('model');
-        const peer = peers.findBy('peer.id', connection.peer);
-        const info = data.info;
+      connection.on('sending_progress', (progress) => {
+        peer.set('transfer.sendingProgress', progress);
+      });
+      webrtc.sendFile(connection, file);
+      peer.set('state', 'receiving_file_data');
+    } else {
+      peer.set('state', 'declined_file_transfer');
+    }
+  },
 
-        peer.set('transfer.info', info);
-        peer.set('state', 'received_file_info');
-    },
+  _onPeerP2PFileCanceled(event, data) {
+    const connection = data.connection;
+    const peers = this.get('model');
+    const peer = peers.findBy('peer.id', connection.peer);
 
-    _onPeerP2PFileResponse: function (event, data) {
-        console.log('Peer:\t Received file response', data);
+    connection.close();
+    peer.set('transfer.receivingProgress', 0);
+    peer.set('transfer.info', null);
+    peer.set('state', 'idle');
+  },
 
-        const connection = data.connection;
-        const peers = this.get('model');
-        const peer = peers.findBy('peer.id', connection.peer);
-        const webrtc = this.get('webrtc');
-        const response = data.response;
+  _onPeerP2PFileReceived(event, data) {
+    console.log('Peer:\t Received file', data);
 
-        if (response) {
-            const file = peer.get('transfer.file');
+    const connection = data.connection;
+    const peers = this.get('model');
+    const peer = peers.findBy('peer.id', connection.peer);
 
-            connection.on('sending_progress', function (progress) {
-                peer.set('transfer.sendingProgress', progress);
-            });
-            webrtc.sendFile(connection, file);
-            peer.set('state', 'receiving_file_data');
-        } else {
-            peer.set('state', 'declined_file_transfer');
-        }
-    },
+    connection.close();
+    peer.set('transfer.receivingProgress', 0);
+    peer.set('transfer.info', null);
+    peer.set('state', 'idle');
+    peer.trigger('didReceiveFile');
+  },
 
-    _onPeerP2PFileCanceled: function (event, data) {
-        const connection = data.connection;
-        const peers = this.get('model');
-        const peer = peers.findBy('peer.id', connection.peer);
+  _onPeerP2PFileSent(event, data) {
+    console.log('Peer:\t Sent file', data);
 
-        connection.close();
-        peer.set('transfer.receivingProgress', 0);
-        peer.set('transfer.info', null);
-        peer.set('state', 'idle');
-    },
+    const connection = data.connection;
+    const peers = this.get('model');
+    const peer = peers.findBy('peer.id', connection.peer);
 
-    _onPeerP2PFileReceived: function (event, data) {
-        console.log('Peer:\t Received file', data);
+    peer.set('transfer.sendingProgress', 0);
+    peer.set('transfer.file', null);
+    peer.set('state', 'idle');
+    peer.trigger('didSendFile');
+  },
 
-        const connection = data.connection;
-        const peers = this.get('model');
-        const peer = peers.findBy('peer.id', connection.peer);
+  // Based on http://net.ipcalf.com/
+  _setUserLocalIP() {
+    const ips = this.get('you.local_ips');
 
-        connection.close();
-        peer.set('transfer.receivingProgress', 0);
-        peer.set('transfer.info', null);
-        peer.set('state', 'idle');
-        peer.trigger('didReceiveFile');
-    },
+    // RTCPeerConnection is provided by PeerJS library
+    const rtc = new window.RTCPeerConnection({ iceServers: [] });
+    rtc.createDataChannel('', { reliable: false });
 
-    _onPeerP2PFileSent: function (event, data) {
-        console.log('Peer:\t Sent file', data);
+    rtc.onicecandidate = (event) => {
+      if (event.candidate) {
+        grep(event.candidate.candidate);
+      }
+    };
 
-        const connection = data.connection;
-        const peers = this.get('model');
-        const peer = peers.findBy('peer.id', connection.peer);
+    rtc.createOffer(
+      (offer) => {
+        grep(offer.sdp);
+        rtc.setLocalDescription(offer);
+      },
+      (error) => {
+        console.warn('Fetching local IP failed', error);
+      },
+    );
 
-        peer.set('transfer.sendingProgress', 0);
-        peer.set('transfer.file', null);
-        peer.set('state', 'idle');
-        peer.trigger('didSendFile');
-    },
+    function grep(sdpOrCandidate) {
+      const lines = sdpOrCandidate.split('\r\n');
+      let i;
+      let parts;
+      let addr;
+      let type;
 
-    // Based on http://net.ipcalf.com/
-    _setUserLocalIP: function () {
-        var ips = this.get('you.local_ips');
+      for (i = 0; i < lines.length; i += 1) {
+        const line = lines[i];
 
-        // RTCPeerConnection is provided by PeerJS library
-        var rtc = new window.RTCPeerConnection({iceServers: []});
-        rtc.createDataChannel('', {reliable: false});
+        if (~line.indexOf('a=candidate') || line.match(/^candidate:\d+\s/)) {
+          parts = line.split(' ');
+          addr = parts[4];
+          type = parts[7];
 
-        rtc.onicecandidate = function (event) {
-            if (event.candidate) {
-                grep(event.candidate.candidate);
+          if (type === 'host') {
+            if (addr !== '0.0.0.0') {
+              ips.addObject(addr);
             }
-        };
+          }
+        } else if (~line.indexOf('c=')) {
+          parts = line.split(' ');
+          addr = parts[2];
 
-        rtc.createOffer(
-            function (offer) {
-                grep(offer.sdp);
-                rtc.setLocalDescription(offer);
-            },
-            function (error) {
-                console.warn("Fetching local IP failed", error);
-            }
-        );
-
-        function grep(sdpOrCandidate) {
-            var lines = sdpOrCandidate.split('\r\n'),
-                i, parts, addr, type;
-
-            for (i = 0; i < lines.length; i++) {
-                var line = lines[i];
-
-                if (~line.indexOf("a=candidate") || line.match(/^candidate:\d+\s/)) {
-                    parts = line.split(' ');
-                    addr = parts[4];
-                    type = parts[7];
-
-                    if (type === 'host') {
-                        if (addr !== '0.0.0.0') {
-                            ips.addObject(addr);
-                        }
-                    }
-                } else if (~line.indexOf("c=")) {
-                    parts = line.split(' ');
-                    addr = parts[2];
-
-                    if (addr !== '0.0.0.0') {
-                        ips.addObject(addr);
-                    }
-                }
-            }
+          if (addr !== '0.0.0.0') {
+            ips.addObject(addr);
+          }
         }
-    },
+      }
+    }
+  },
 
-    // Broadcast some of user's property changes to other peers
-    userEmailDidChange: function () {
-        var email = this.get('you.email'),
-            room  = this.get('room');
+  // Broadcast some of user's property changes to other peers
+  userEmailDidChange: Ember.observer('you.email', function () {
+    const email = this.get('you.email');
+    const room = this.get('room');
 
-        if (room) {
-            console.log('Broadcasting user\'s email: ', email);
-            room.update({email: email});
-        }
-    }.observes('you.email'),
+    if (room) {
+      console.log('Broadcasting user\'s email: ', email);
+      room.update({ email });
+    }
+  }),
 
-    userLocalIPDidChange: function () {
-        var addr = this.get('you.local_ip'),
-            room  = this.get('room');
+  userLocalIPDidChange: Ember.observer('you.local_ip', function () {
+    const addr = this.get('you.local_ip');
+    const room = this.get('room');
 
-        if (room && addr) {
-            console.log('Broadcasting user\'s local IP: ', addr);
-            room.update({local_ip: addr});
-        }
-    }.observes('you.local_ip')
+    if (room && addr) {
+      console.log('Broadcasting user\'s local IP: ', addr);
+      room.update({ local_ip: addr });
+    }
+  }),
 });

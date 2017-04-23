@@ -1,19 +1,20 @@
 import Ember from 'ember';
 
 export default Ember.TextField.extend({
-    classNames: ['room-url'],
+  classNames: ['room-url'],
 
-    becomeSelected: function () {
-        this.$().focus().select();
-    }.on('didInsertElement'),
+  didInsertElement() {
+    this.$().focus().select();
+  },
 
-    copyValueToClipboard: function () {
-        if (window.ClipboardEvent) {
-            const pasteEvent = new window.ClipboardEvent('paste', {
-                dataType: 'text/plain',
-                data: this.$().val()
-            });
-            document.dispatchEvent(pasteEvent);
-        }
+  copyValueToClipboard() {
+    if (window.ClipboardEvent) {
+      const pasteEvent = new window.ClipboardEvent('paste', {
+        dataType: 'text/plain',
+        data: this.$().val(),
+      });
+
+      document.dispatchEvent(pasteEvent);
     }
+  },
 });

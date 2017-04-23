@@ -1,9 +1,9 @@
 /* jshint node: true */
 
-module.exports = function (environment) {
-  var ENV = {
+module.exports = (environment) => {
+  const ENV = {
     modulePrefix: 'share-drop',
-    environment: environment,
+    environment,
     rootURL: '/',
     locationType: 'auto',
     EmberENV: {
@@ -13,8 +13,8 @@ module.exports = function (environment) {
       },
       EXTEND_PROTOTYPES: {
         // Prevent Ember Data from overriding Date.parse.
-        Date: false
-      }
+        Date: false,
+      },
     },
 
     APP: {
@@ -22,7 +22,7 @@ module.exports = function (environment) {
       // when it is created
     },
 
-    FIREBASE_URL: process.env.FIREBASE_URL
+    FIREBASE_URL: process.env.FIREBASE_URL,
   };
 
   if (environment === 'development') {
